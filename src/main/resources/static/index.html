@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Панель управления</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="icon" type="image/x-icon" href="https://7winds.mobi/local/templates/games/favicon.ico">
+
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="http://cdn.jsdelivr.net/npm/vue@2.6.6/dist/vue.js"></script>
+    <script type="text/javascript">
+        const addPerson = () => {
+            $.ajax({
+                url: 'add-person',
+                type: 'POST',
+                contentType: "application/json",
+                dataType: "json",
+                data: `{
+                    "name"   : "",
+                    "who"    : "",
+                    "profile": [],
+                    "tel"    : "",
+                    "email"  : "",
+                    "avatar" : "",
+                    "status" : 0
+                }`,
+                success(data) {
+                    $.ajax({
+                        url: 'get-all-data',
+                        type: 'GET',
+                        success(data) {
+                            AdmireApp.persons = data.persons;
+                            AdmireApp.projects = data.projects;
+                            AdmireApp.plans = data.plans;
+
+                            setTimeout(function () {
+                                let selects = document.querySelectorAll('select');
+                                let select_instances = M.FormSelect.init(selects, {});
+                            }, 500);
+                        }
+                    });
+                }
+            });
+        };
+        const addProject = () => {
+            $.ajax({
+                url: 'add-project',
+                type: 'POST',
+                contentType: "application/json",
+                dataType: "json",
+                data: `{
+                    "title"   : "",
+                    "workers" : [],
+                    "platform": [],
+                    "start"   : ${new Date().getTime()},
+                    "end"     : ${new Date().getTime()},
+                    "avatar"  : ""
+                }`,
+                success(data) {
+                    $.ajax({
+                        url: 'get-all-data',
+                        type: 'GET',
+                        success(data) {
+                            AdmireApp.persons = data.persons;
+                            AdmireApp.projects = data.projects;
+                            AdmireApp.plans = data.plans;
+
+                            setTimeout(function () {
+                                let selects = document.querySelectorAll('select');
+                                let select_instances = M.FormSelect.init(selects, {});
+                            }, 500);
+                        }
+                    });
+                }
+            });
+        };
+        const addPlan = () => {
+            $.ajax({
+                url: 'add-plan',
+                type: 'POST',
+                contentType: "application/json",
+                dataType: "json",
+                data: `{
+                    "project_id": 0,
+                    "time"      : ${new Date().getTime()}
+                }`,
+                success(data) {
+                    $.ajax({
+                        url: 'get-all-data',
+                        type: 'GET',
+                        success(data) {
+                            AdmireApp.persons = data.persons;
+                            AdmireApp.projects = data.projects;
+                            AdmireApp.plans = data.plans;
+
+                            setTimeout(function () {
+                                let selects = document.querySelectorAll('select');
+                                let select_instances = M.FormSelect.init(selects, {});
+                            }, 500);
+                        }
+                    });
+                }
+            });
+        };
+
+        Vue.component("block-plan", {
+            props: ["plan", "index"],
+            template: `<div class="card-panel grey lighten-5 z-depth-1 p-2"
+                 @click="OpenModal('plan', index)">
+                <div class="row valign-wrapper">
+                    <div class="col s10">
+                        <span class="black-text">
+                            {{title_project}}<hr class="m-0" />{{time_plan}}
+                        </span>
+                    </div>
+                </div>
+            </div>`,
+            methods: {
+                OpenModal: function(which, index) {
+                    AdmireApp.OpenModal('plan', index);
+                }
+            },
+            computed: {
+                title_project: function() {
+                    for(let i in AdmireApp.projects) {
+                        if(this.plan.project_id == AdmireApp.projects[i].id) {
+                            return AdmireApp.projects[i].title;
+                        }
+                    }
+                    return "";
+                },
+                time_plan: function() {
+                    let date = new Date(+this.plan.time);
+                    return date.getHours() + ":" + date.getMinutes() + " " +
+                        date.getDate() + "." + (date.getMonth() + 1) + "." + date.getFullYear();
+                }
+            }
+        });
+
+        function AddImage(el) {
+            let file = $(el).get(0).files;
+            let fd = new FormData();
+            fd.append('file', file[0]);
+            fd.append('old_file', AdmireApp.which_open == "person" ?
+                AdmireApp.current_person.avatar :
+                AdmireApp.current_project.avatar);
+
+            $.ajax({
+                url: "/upload-file",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: function(data) {
+                    if(AdmireApp.which_open == "person")
+                        AdmireApp.current_person.avatar = data;
+                    else
+                        AdmireApp.current_project.avatar = data;
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+
+<div id="AdmireApp">
+
+<div class="container-fluid p-0">
+    <div class="row m-0">
+        <div class="col-12 col-md-4 p-0 border">
+            <button class="btn w-100" onclick="addPerson();">Добавить сотрудника</button>
+            <div v-if="!!persons" v-for="(person, index) in persons" class="card-panel grey lighten-5 z-depth-1 p-2"
+                    @click="OpenModal('person', index)">
+                <div class="row valign-wrapper m-0">
+                    <div class="col-auto">
+                        <img :src="(person.avatar.substring(0, 4) == 'http' ?
+                        person.avatar :
+                        'files/' + person.avatar)" alt="" class="circle responsive-img" style="width: 40px; height: 40px;">
+                    </div>
+                    <div class="col p-0">
+                        <span class="black-text">
+                            {{person.name}}<hr />{{person.who}}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4 p-0 border">
+            <button class="btn w-100" onclick="addProject();">Добавить проект</button>
+            <div v-if="!!projects" v-for="(project, index) in projects" class="card-panel grey lighten-5 z-depth-1 p-2"
+                 @click="OpenModal('project', index)">
+                <div class="row valign-wrapper m-0">
+                    <div class="col-auto">
+                        <img :src="(project.avatar.substring(0, 4) == 'http' ?
+                        project.avatar :
+                        'files/' + project.avatar)" alt="" class="circle responsive-img" style="width: 40px; height: 40px;">
+                    </div>
+                    <div class="col p-0">
+                        <span class="black-text">
+                            {{project.title}}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4 p-0 border">
+            <button class="btn w-100" onclick="addPlan();">Добавить совещание</button>
+            <block-plan v-if="!!plans" v-for="(plan, index) in plans" :key="index" :plan="plan" :index="index"></block-plan>
+        </div>
+    </div>
+</div>
+
+<div id="modal-person" class="modal bottom-sheet" style="max-height: 90%!important;">
+    <div v-if="is_opened_person" class="modal-content">
+        <div class="input-field">
+            <input placeholder=" " id="person_name" type="text" class="validate" v-model="current_person.name">
+            <label for="person_name">Фамилия Имя</label>
+        </div>
+        <div class="input-field">
+            <input placeholder=" " id="person_who" type="text" class="validate" v-model="current_person.who">
+            <label for="person_who">Должность</label>
+        </div>
+        <div class="input-field">
+            <select multiple v-model="current_person.profile">
+                <option v-for="(pp, key, index) in pp_object" :key="index" :value="key">{{pp}}</option>
+            </select>
+            <label>Профиль</label>
+        </div>
+        <div class="input-field">
+            <input placeholder=" " id="person_tel" type="text" class="validate" v-model="current_person.tel">
+            <label for="person_tel">Телефон</label>
+        </div>
+        <div class="input-field">
+            <input placeholder=" " id="person_email" type="text" class="validate" v-model="current_person.email">
+            <label for="person_email">Электронная почта</label>
+        </div>
+        <div class="row m-0">
+            <div class="col-12 col-md-6 p-0" style="min-height: 140px;">
+                <img :src="(current_person.avatar.substring(0, 4) == 'http' ?
+                        current_person.avatar :
+                        'files/' + current_person.avatar)" class="w-100">
+            </div>
+            <div class="col-12 col-md-6 p-0">
+                <div class="input-field">
+                    <input placeholder=" " id="person_avatar" class="validate" type="text" v-model="current_person.avatar">
+                    <label for="person_avatar">Аватар</label>
+                </div>
+                <div class="file-field input-field">
+                    <label class="btn w-100 text-center black-text">
+                        <span>Загрузить аватар</span>
+                        <input type="file" onchange="AddImage(this);">
+                    </label>
+                </div>
+            </div>
+        </div>
+        <p>
+            <label>
+                <input name="status" type="radio" value="1" v-model="current_person.status" />
+                <span>Сотрудник</span>
+            </label>
+        </p>
+        <p>
+            <label>
+                <input name="status" type="radio" value="2" v-model="current_person.status" />
+                <span>Стажер</span>
+            </label>
+        </p>
+    </div>
+    <div class="modal-footer">
+        <a class="modal-close waves-effect waves-green btn-flat">Закрыть</a>
+        <a class="waves-effect waves-green btn-flat" @click="SaveData('person', current_person.id)">Сохранить</a>
+        <a class="modal-close waves-effect waves-green btn-flat" @click="DeleteData('person', current_person.id)">Удалить</a>
+    </div>
+</div>
+
+<div id="modal-project" class="modal bottom-sheet" style="max-height: 90%!important;">
+        <div v-if="is_opened_project" class="modal-content">
+            <div class="input-field">
+                <input placeholder=" " id="project_title" type="text" class="validate" v-model="current_project.title">
+                <label for="project_title">Название проекта</label>
+            </div>
+            <div class="input-field">
+                <select multiple v-model="current_project.workers">
+                    <option v-for="(person, key, index) in persons" :key="index" :value="person.id">{{person.name}}</option>
+                </select>
+                <label>Выполняют</label>
+            </div>
+            <div class="input-field">
+                <select multiple v-model="current_project.platform">
+                    <option v-for="(pp, key, index) in pp_object" :key="index" :value="key">{{pp}}</option>
+                </select>
+                <label>Платформы</label>
+            </div>
+            <div class="row m-0">
+                <p class="lead m-0 w-100">Начало проекта</p>
+                <div class="input-field col-6">
+                    <input placeholder=" " id="project_start_date" type="date" class="validate" v-model="project_start_date">
+                    <label for="project_start_date">Дата</label>
+                </div>
+                <div class="input-field col-6">
+                    <input placeholder=" " id="project_start_time" type="time" class="validate" v-model="project_start_time">
+                    <label for="project_start_time">Время</label>
+                </div>
+            </div>
+            <div class="input-field d-none">
+                <input placeholder=" " id="project_start" type="text" class="validate" v-model="current_project.start">
+                <label for="project_start">Начало проекта</label>
+            </div>
+            <div class="row m-0">
+                <p class="lead m-0 w-100">Окончание проекта</p>
+                <div class="input-field col-6">
+                    <input placeholder=" " id="project_end_date" type="date" class="validate" v-model="project_end_date">
+                    <label for="project_end_date">Дата</label>
+                </div>
+                <div class="input-field col-6">
+                    <input placeholder=" " id="project_end_time" type="time" class="validate" v-model="project_end_time">
+                    <label for="project_end_time">Время</label>
+                </div>
+            </div>
+            <div class="input-field d-none">
+                <input placeholder=" " id="project_end" type="text" class="validate" v-model="current_project.end">
+                <label for="project_end">Окончание проекта</label>
+            </div>
+            <div class="row m-0">
+                <div class="col-12 col-md-6 p-0" style="min-height: 140px;">
+                    <img :src="(current_project.avatar.substring(0, 4) == 'http' ?
+                        current_project.avatar :
+                        'files/' + current_project.avatar)" class="w-100">
+                </div>
+                <div class="col-12 col-md-6 p-0">
+                    <div class="input-field">
+                        <input placeholder=" " id="project_avatar" class="validate" type="text" v-model="current_project.avatar">
+                        <label for="project_avatar">Аватар</label>
+                    </div>
+                    <div class="file-field input-field">
+                        <label class="btn w-100 text-center black-text">
+                            <span>Загрузить аватар</span>
+                            <input type="file" onchange="AddImage(this);">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a class="modal-close waves-effect waves-green btn-flat">Закрыть</a>
+            <a class="waves-effect waves-green btn-flat" @click="SaveData('project', current_project.id)">Сохранить</a>
+            <a class="modal-close waves-effect waves-green btn-flat" @click="DeleteData('project', current_project.id)">Удалить</a>
+        </div>
+    </div>
+
+<div id="modal-plan" class="modal bottom-sheet" style="max-height: 90%!important;">
+        <div v-if="is_opened_plan" class="modal-content">
+            <div class="input-field">
+                <select v-model="current_plan.project_id">
+                    <option v-for="(project, index) in projects" :key="index" :value="project.id">{{project.title}}</option>
+                </select>
+                <label>Проект</label>
+            </div>
+            <div class="row m-0">
+                <p class="lead m-0 w-100">Время планерки</p>
+                <div class="input-field col-6">
+                    <input placeholder=" " id="plan_time_date" type="date" class="validate" v-model="plan_time_date">
+                    <label for="plan_time_date">Дата</label>
+                </div>
+                <div class="input-field col-6">
+                    <input placeholder=" " id="plan_time_time" type="time" class="validate" v-model="plan_time_time">
+                    <label for="plan_time_time">Время</label>
+                </div>
+            </div>
+            <div class="input-field d-none">
+                <input placeholder=" " id="plan_time" type="text" class="validate" v-model="current_plan.time">
+                <label for="plan_time">Время планерки</label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a class="modal-close waves-effect waves-green btn-flat">Закрыть</a>
+            <a class="waves-effect waves-green btn-flat" @click="SaveData('plan', current_plan.id)">Сохранить</a>
+            <a class="modal-close waves-effect waves-green btn-flat" @click="DeleteData('plan', current_plan.id)">Удалить</a>
+        </div>
+    </div>
+
+</div>
+
+<script src="http://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        let modals = document.querySelectorAll('.modal');
+        let modal_instances = M.Modal.init(modals, {});
+
+        let selects = document.querySelectorAll('select');
+        let select_instances = M.FormSelect.init(selects, {});
+    });
+
+    const addZero = (num) => {
+        return num < 10 ? "0" + num : "" + num;
+    };
+
+    const AdmireApp = new Vue({
+        el: "#AdmireApp",
+        data: {
+            persons: [],
+            projects: [],
+            plans: [],
+
+            current_person: {},
+            is_opened_person: false,
+            current_project: {},
+            is_opened_project: false,
+            current_plan: {},
+            is_opened_plan: false,
+
+            project_start_date: "",
+            project_start_time: "",
+            project_end_date: "",
+            project_end_time: "",
+            plan_time_date: "",
+            plan_time_time: "",
+
+            which_open: "",
+
+            pp_object: {
+                "ios_swift": "Swift",
+                "ios_objective_c": "ObjectiveC",
+                "android_java": "Android Java",
+                "android_kotlin": "Android Kotlin",
+                "unity": "Unity",
+                "scetch": "Scetch",
+                "figma": "Figma",
+                "adobe_illustrator": "Adobe Illustrator",
+                "adobe_photoshop": "Adobe Photoshop",
+                "tree_ds_max": "3Ds Max",
+                "autodesk_maya": "Autodesk Maya",
+                "blender": "Blender",
+                "substance": "Весь пакет Substance",
+                "adobe": "Весь пакет Adobe",
+                "server_java": "сервера Java",
+                "server_kotlin": "сервера Kotlin",
+                "server_php": "сервера PHP",
+            }
+        },
+        created() {
+            $.ajax({
+                url: 'get-all-data',
+                type: 'GET',
+                success(data) {
+                    AdmireApp.persons = data.persons;
+                    AdmireApp.projects = data.projects;
+                    AdmireApp.plans = data.plans;
+
+                    setTimeout(function () {
+                        let selects = document.querySelectorAll('select');
+                        let select_instances = M.FormSelect.init(selects, {});
+                    }, 500);
+                }
+            });
+        },
+        methods: {
+            OpenModal: function(which, index) {
+                let modal;
+                let date;
+                switch (which) {
+                    case "person":
+                        this.is_opened_person = true;
+                        this.current_person = this.persons[index];
+                        modal = document.getElementById("modal-person");
+                        break;
+                    case "project":
+                        this.is_opened_project = true;
+                        this.current_project = this.projects[index];
+
+                        date = new Date(+this.current_project.start);
+                        this.project_start_date = date.getFullYear() + "-" + addZero(date.getMonth() + 1) + "-" + addZero(date.getDate());
+                        this.project_start_time = addZero(date.getHours()) + ":" + addZero(date.getMinutes());
+                        date = new Date(+this.current_project.end);
+                        this.project_end_date = date.getFullYear() + "-" + addZero(date.getMonth() + 1) + "-" + addZero(date.getDate());
+                        this.project_end_time = addZero(date.getHours()) + ":" + addZero(date.getMinutes());
+
+                        modal = document.getElementById("modal-project");
+                        break;
+                    case "plan":
+                        this.is_opened_plan = true;
+                        this.current_plan = this.plans[index];
+
+                        date = new Date(+this.current_plan.time);
+                        this.plan_time_date = date.getFullYear() + "-" + addZero(date.getMonth() + 1) + "-" + addZero(date.getDate());
+                        this.plan_time_time = addZero(date.getHours()) + ":" + addZero(date.getMinutes());
+
+                        modal = document.getElementById("modal-plan");
+                        break;
+                }
+
+                setTimeout(function () {
+                    let selects = document.querySelectorAll('select');
+                    let select_instances = M.FormSelect.init(selects, {});
+
+                    M.updateTextFields();
+                }, 500);
+
+                let instance = M.Modal.getInstance(modal);
+                instance.open();
+
+                this.which_open = which;
+            },
+            SaveData: function(which, index) {
+                let data;
+                switch (which) {
+                    case "person":
+                        data = this.current_person;
+                        break;
+                    case "project":
+                        data = this.current_project;
+                        break;
+                    case "plan":
+                        data = this.current_plan;
+                        break;
+                }
+                $.ajax({
+                    url: `add-${which}`,
+                    type: 'POST',
+                    data:  JSON.stringify(data),
+                    contentType: "application/json",
+                    dataType: "json",
+                    success(data) {
+                        switch (which) {
+                            case "person":
+                                for(let i in AdmireApp.persons) {
+                                    if(AdmireApp.persons[i].id == AdmireApp.current_person.id) {
+                                        AdmireApp.$set(AdmireApp.persons, i, AdmireApp.current_person);
+                                    }
+                                }
+                                break;
+                            case "project":
+                                for(let i in AdmireApp.projects) {
+                                    if(AdmireApp.projects[i].id == AdmireApp.current_project.id) {
+                                        AdmireApp.$set(AdmireApp.projects, i, AdmireApp.current_project);
+                                    }
+                                }
+                                break;
+                            case "plan":
+                                for(let i in AdmireApp.plans) {
+                                    if(AdmireApp.plans[i].id == AdmireApp.current_plan.id) {
+                                        AdmireApp.$set(AdmireApp.plans, i, AdmireApp.current_plan);
+                                    }
+                                }
+                                break;
+                        }
+                        alert("Данные обновлены!");
+                    }
+                });
+            },
+            DeleteData: function(which, index) {
+                $.ajax({
+                    url: `remove-${which}/${index}`,
+                    type: 'GET',
+                    success(data) {
+                        switch (which) {
+                            case "person":
+                                for(let i in AdmireApp.persons) {
+                                    if(AdmireApp.persons[i].id == AdmireApp.current_person.id) {
+                                        AdmireApp.persons.splice(i, 1);
+                                    }
+                                }
+                                break;
+                            case "project":
+                                for(let i in AdmireApp.projects) {
+                                    if(AdmireApp.projects[i].id == AdmireApp.current_project.id) {
+                                        AdmireApp.projects.splice(i, 1);
+                                    }
+                                }
+                                break;
+                            case "plan":
+                                for(let i in AdmireApp.plans) {
+                                    if(AdmireApp.plans[i].id == AdmireApp.current_plan.id) {
+                                        AdmireApp.plans.splice(i, 1);
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                });
+            }
+        },
+        watch: {
+            project_start_date: function (val) {
+                let date = new Date(+this.current_project.start);
+                date.setFullYear(+val.split("-")[0], +val.split("-")[1], +val.split("-")[2]);
+                AdmireApp.$set(this.current_project, "start", date.getTime());
+            },
+            project_start_time: function (val) {
+                let date = new Date(+this.current_project.start);
+                date.setHours(+val.split(":")[0], +val.split(":")[1]);
+                AdmireApp.$set(this.current_project, "start", date.getTime());
+            },
+            project_end_date: function (val) {
+                let date = new Date(+this.current_project.end);
+                date.setFullYear(+val.split("-")[0], +val.split("-")[1], +val.split("-")[2]);
+                AdmireApp.$set(this.current_project, "end", date.getTime());
+            },
+            project_end_time: function (val) {
+                let date = new Date(+this.current_project.end);
+                date.setHours(+val.split(":")[0], +val.split(":")[1]);
+                AdmireApp.$set(this.current_project, "end", date.getTime());
+            },
+            plan_time_date: function (val) {
+                let date = new Date(+this.current_plan.time);
+                date.setFullYear(+val.split("-")[0], +val.split("-")[1], +val.split("-")[2]);
+                AdmireApp.$set(this.current_plan, "time", date.getTime());
+            },
+            plan_time_time: function (val) {
+                let date = new Date(+this.current_plan.time);
+                date.setHours(+val.split(":")[0], +val.split(":")[1]);
+                AdmireApp.$set(this.current_plan, "time", date.getTime());
+            }
+        }
+    });
+</script>
+</body>
+</html>
